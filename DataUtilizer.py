@@ -3,7 +3,9 @@ import cv2
 import pandas as pd
 import numpy as np
 from keras.utils import to_categorical
+from keras import models
 from scipy import ndimage
+from sklearn.metrics import accuracy_score
 
 def getImageDataframe(folderPath: str, alter = 0) -> pd.DataFrame:
     
@@ -79,9 +81,14 @@ def getOneHot(list):
     y_one_hot = to_categorical(list, num_classes=4)
     return y_one_hot
 
+def showValidationResult(hist):
+    validation_accuracy = hist.history['val_accuracy']
+    average_validation_accuracy = np.mean(validation_accuracy)
+    print(f"Average Validation Accuracy: {average_validation_accuracy}")
+
 def saveModel(model, name="output_model"):
     # Save the model weights to a HDF5 file
-    model.save_weights(name+".h5")
+    model.save_weights(name+".weights.h5")
 
 def augmentImage(row, random_seed=0) -> np.ndarray:
     
@@ -132,3 +139,13 @@ def augmentImage(row, random_seed=0) -> np.ndarray:
     image = cv2.resize(image, (original_size[1], original_size[0]))
 
     return image
+
+def testModel(modelFilename, imageCol, labelCol, model):
+
+    modelPath = "{}.weights.h5".format(modelFilename)
+    model.load_weights(modelPath)
+
+    y_pred = np.argmax(model.predict(imageCol), axis=1)
+    accuracy = accuracy_score(labelCol, y_pred)
+
+    print("Test Accuracy:",accuracy)

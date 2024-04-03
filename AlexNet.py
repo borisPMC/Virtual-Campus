@@ -7,9 +7,9 @@ np.random.seed(1000)
 
 # Define AlexNet model
 class AlexNet:
-    def createModel(shape, num_classes):
+    def createModel():
         model = Sequential()
-        model.add(Input(shape))
+        model.add(Input(INPUT_SHAPE))
 
         model.add(Conv2D(96, kernel_size=(11, 11), strides=(4, 4), activation='relu'))
         model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
@@ -24,24 +24,24 @@ class AlexNet:
 
         # Flatten layer to convert 3D features to 1D vector
         model.add(Flatten())
-        model.add(Dense(4096, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(4096, activation='relu'))
         model.add(Dropout(0.5))
-
+        model.add(Dense(4096, activation='relu'))
+        model.add(Dropout(0.5))
         # Output Layer: Fully connected layer with num_classes units for classification
-        model.add(Dense(num_classes, activation='softmax'))
+        model.add(Dense(N_CLASS, activation='softmax'))
         
         model.summary()
 
         # Compiling
-        opt = Adam(learning_rate=0.01)
+        opt = Adam(learning_rate=0.0002*2)
         model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
         return model
 
     def trainModel(imageCol, labelCol):
         # Create and compile the model
-        model = AlexNet.createModel(INPUT_SHAPE, num_classes)
+        model = AlexNet.createModel()
 
         labelCol = DataUtilizer.getOneHot(labelCol)
 
@@ -50,18 +50,25 @@ class AlexNet:
         return history, model
 
 # Instantiate the model
-num_classes = 4 # Real vs Fake
+N_CLASS = 4 # Real vs Fake
 INPUT_SHAPE = (227, 227, 3) # AlexNet input
+LR_ITER = 5 # Config Adam Learning Rate
 
-# Import Data
-path = "images"
+# # Import Data
+# path = "images"
+# imgDf = DataUtilizer.getImageDataframe(path, 4)
+# imageCol, labelCol = DataUtilizer.getImageAndLabel(imgDf)
+
+# # 5-fold cross validation
+# imageCol, labelCol = DataUtilizer.getImageAndLabel(imgDf)
+# history, model = AlexNet.trainModel(imageCol, labelCol)
+
+# # Access validation score from history object
+# DataUtilizer.showValidationResult(history)
+# DataUtilizer.saveModel(model, "alex_a{}".format(LR_ITER))
+
+# Import Test
+path = "testset"
 imgDf = DataUtilizer.getImageDataframe(path, 4)
-
-# 5-fold cross validation
 imageCol, labelCol = DataUtilizer.getImageAndLabel(imgDf)
-history, model = AlexNet.trainModel(imageCol, labelCol)
-
-# Access validation score from history object
-validation_accuracy = history.history['val_accuracy']
-average_validation_accuracy = np.mean(validation_accuracy)
-print(f"Average Validation Accuracy: {average_validation_accuracy}")
+DataUtilizer.testModel("alex_a5", imageCol, labelCol, AlexNet.createModel())

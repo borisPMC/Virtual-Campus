@@ -6,9 +6,9 @@ import cv2
 import numpy as np
 
 class VGGNet:
-    def createModel(shape, n_class):
+    def createModel():
         model = Sequential()
-        model.add(Input(shape))
+        model.add(Input(INPUT_SHAPE))
         
         # Block 1
         model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
@@ -40,18 +40,23 @@ class VGGNet:
 
         # Fully connected layers
         model.add(Flatten())
+        model.add(Dropout(0.5))
         model.add(Dense(4096, activation='relu'))
+        model.add(Dropout(0.5))
         model.add(Dense(4096, activation='relu'))
-        model.add(Dense(n_class, activation='softmax'))  # Output layer for ImageNet classification
+        model.add(Dropout(0.5))
+        model.add(Dense(N_CLASS, activation='softmax'))  # Output layer for ImageNet classification
+
+        model.summary()
 
         # Compiling
-        opt = Adam(learning_rate=0.01)
+        opt = Adam(learning_rate=0.0002*LR_ITER)
         model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
         return model
     
     def trainModel(imageCol, labelCol):
         # Create and compile the model
-        model = VGGNet.createModel(INPUT_SHAPE, num_classes)
+        model = VGGNet.createModel()
 
         labelCol = DataUtilizer.getOneHot(labelCol)
 
@@ -65,8 +70,9 @@ class VGGNet:
         return image
     
 # Instantiate the model
-num_classes = 4 # Real vs Fake
+N_CLASS = 4 # Real vs Fake
 INPUT_SHAPE = (224, 224, 3) # VGGNet input
+LR_ITER = 1 # Config Adam Learning Rate
 
 # Import Data
 path = "images"
@@ -78,6 +84,12 @@ imageCol, labelCol = DataUtilizer.getImageAndLabel(imgDf)
 history, model = VGGNet.trainModel(imageCol, labelCol)
 
 # Access validation score from history object
-validation_accuracy = history.history['val_accuracy']
-average_validation_accuracy = np.mean(validation_accuracy)
-print(f"Average Validation Accuracy: {average_validation_accuracy}")
+DataUtilizer.showValidationResult(history)
+DataUtilizer.saveModel(model, "vgg_a{}".format(LR_ITER))
+
+# # Import Test
+# path = "testset"
+# imgDf = DataUtilizer.getImageDataframe(path, 4)
+# imgDf["image"] = imgDf.apply(VGGNet.resizeInput, axis=1)
+# imageCol, labelCol = DataUtilizer.getImageAndLabel(imgDf)
+# DataUtilizer.testModel("vgg_2", imageCol, labelCol, VGGNet.createModel())
